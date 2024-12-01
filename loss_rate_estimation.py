@@ -11,7 +11,7 @@ import simpy
 
 import queue
 
-simulation_duration = 100000
+simulation_duration = 10000000
 periodPrintLR = 100
 df_lossRates = pd.DataFrame(columns=['sourceId', 'time', 'lossRate'])
 

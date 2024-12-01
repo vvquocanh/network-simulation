@@ -15,13 +15,11 @@ class queueClass(object):
 
     def service(self):
         pkt = self.buffer.get()
-
         service_time = float(pkt.packet_size / self.service_rate)
         yield self.env.timeout(service_time)
-
+    
         pkt.acknowledge()
         del pkt
-
 
         if self.buffer.qsize() > 0:
             self.env.process(self.service())
@@ -30,9 +28,8 @@ class queueClass(object):
 
     def reception(self, pkt):
         self.buffer.put(pkt)
-
         if self.in_service == 0:
-            self.in_service = 1
+            self.inService = 1
             self.env.process(self.service())
 
 class DataSource(object):
@@ -91,7 +88,8 @@ class VideoSource(object):
         peak_rate = float(self.burstiness * self.average_rate)
         sending_time = float(self.packet_size / peak_rate)
         off_time_average = float(self.burstiness * self.on_time_average) - self.on_time_average
-        
+        print(off_time_average)
+        print(self.on_time_average)
         is_on = True
         state_time = np.random.exponential(self.on_time_average)
         init_time = self.env.now
@@ -110,6 +108,8 @@ class VideoSource(object):
                     is_on = True
                     state_time = np.random.exponential(self.on_time_average)
                     init_time = self.env.now
+                else:
+                    yield self.env.timeout(0.00001)
 
 
 class packet(object):
@@ -122,29 +122,32 @@ class packet(object):
 
 df_response_time = pd.DataFrame(columns=['source_id', 'burstiness', 'response_time'])
 
-for burstiness in np.arange(1.0, 5.1, 0.1):
+for burstiness in np.arange(1.0, 11, 1):
     simulation_duration = 20
 
     env = simpy.Environment()
 
     q = queueClass(env, 100 * math.pow(10, 6))
-    data_source = DataSource(env, q, 30 * math.pow(10, 6))
-    voice_source = VoiceSource(env, q, 800, 20 * math.pow(10, 6))
+    #data_source = DataSource(env, q, 30 * math.pow(10, 6))
+    #voice_source = VoiceSource(env, q, 800, 20 * math.pow(10, 6))
     video_source = VideoSource(env, q, 8000, burstiness,30 * math.pow(10, 6), 0.001)
 
     env.run(until=simulation_duration)
 
-    df_response_time.loc[len(df_response_time)] = {'source_id': 'data_source', 'burstiness': burstiness, 'response_time': float(data_source.processed_packet / simulation_duration)}
-    df_response_time.loc[len(df_response_time)] = {'source_id': 'voice_source', 'burstiness': burstiness, 'response_time': float(voice_source.processed_packet / simulation_duration)}
-    df_response_time.loc[len(df_response_time)] = {'source_id': 'video_source', 'burstiness': burstiness, 'response_time': float(video_source.processed_packet / simulation_duration)}
-    df_response_time.loc[len(df_response_time)] = {'source_id': 'total', 'burstiness': burstiness, 'response_time': float((data_source.processed_packet + voice_source.processed_packet + video_source.processed_packet) / simulation_duration)}
+    #print(f"Data source: {data_source.processed_packet}")
+    #print(f"Voice source: {voice_source.processed_packet}")
+    print(f"Video source: {video_source.processed_packet}")
+    #df_response_time.loc[len(df_response_time)] = {'source_id': 'data_source', 'burstiness': burstiness, 'response_time': float(simulation_duration / data_source.processed_packet)}
+    #df_response_time.loc[len(df_response_time)] = {'source_id': 'voice_source', 'burstiness': burstiness, 'response_time': float(simulation_duration / voice_source.processed_packet)}
+    df_response_time.loc[len(df_response_time)] = {'source_id': 'video_source', 'burstiness': burstiness, 'response_time': float(simulation_duration / video_source.processed_packet)}
+    #df_response_time.loc[len(df_response_time)] = {'source_id': 'total', 'burstiness': burstiness, 'response_time': float(simulation_duration / (data_source.processed_packet + voice_source.processed_packet + video_source.processed_packet))}
 
     print(f"Burstiness: {burstiness}")
 
-plt.plot(df_response_time[df_response_time['source_id'] == 'data_source']['burstiness'], df_response_time[df_response_time['source_id'] == 'data_source']['response_time'], linewidth=1, label='Data Source')
-plt.plot(df_response_time[df_response_time['source_id'] == 'voice_source']['burstiness'], df_response_time[df_response_time['source_id'] == 'voice_source']['response_time'], linewidth=1, label='Voice Source')
+#plt.plot(df_response_time[df_response_time['source_id'] == 'data_source']['burstiness'], df_response_time[df_response_time['source_id'] == 'data_source']['response_time'], linewidth=1, label='Data Source')
+#plt.plot(df_response_time[df_response_time['source_id'] == 'voice_source']['burstiness'], df_response_time[df_response_time['source_id'] == 'voice_source']['response_time'], linewidth=1, label='Voice Source')
 plt.plot(df_response_time[df_response_time['source_id'] == 'video_source']['burstiness'], df_response_time[df_response_time['source_id'] == 'video_source']['response_time'], linewidth=1, label='Video Source')
-plt.plot(df_response_time[df_response_time['source_id'] == 'total']['burstiness'], df_response_time[df_response_time['source_id'] == 'total']['response_time'], linewidth=1, label='Total')
+#plt.plot(df_response_time[df_response_time['source_id'] == 'total']['burstiness'], df_response_time[df_response_time['source_id'] == 'total']['response_time'], linewidth=1, label='Total')
 plt.grid(True, which='both', linestyle='dotted')
 plt.ylim(ymin=0)
 plt.ylabel('Response time')
