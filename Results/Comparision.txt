@@ -1,0 +1,6 @@
+(physical) duration of the simulation: 59.20677876472473
+Loss rate: 0.050781588719757985
+
+Loss rate: 5.087534e-02
+Execution duration: 1.085651e+00
+Execution duration: 1.086652

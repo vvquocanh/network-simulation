@@ -1,0 +1,6 @@
+1) blocksize = sqrt(TMAX) (simulation time)
+2) epsilon T / loss rate = x %
+a good CI is x < 10%
+3) If epsilon T < loss rate > 10%, increase TMAX
+
+t2 = t1 * ((epsilon t1 / epsilon t2) ^ 2)
