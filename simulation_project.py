@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
-class queueClass(object):
+class QueueClass(object):
     def __init__(self, env, service_rate):
         self.env = env
         self.service_rate = service_rate
@@ -17,7 +17,7 @@ class queueClass(object):
         pkt = self.buffer.get()
         service_time = float(pkt.packet_size / self.service_rate)
         yield self.env.timeout(service_time) 
-        pkt.acknowledge(self.env.now)
+        pkt.acknowledge()
         del pkt
 
         if self.buffer.qsize() > 0:
@@ -32,7 +32,7 @@ class queueClass(object):
             self.in_service = 1
             self.env.process(self.service())
 
-class DataSource(object):
+class Source(object):
     def __init__(self, env, queue, rate):
         self.env = env
         self.queue = queue
@@ -42,11 +42,19 @@ class DataSource(object):
         self.action = env.process(self.run())
 
     def run(self):
+        pass
+
+    def acknowledge(self, enter_time):
+        self.processed_packet += 1
+        self.total_response_time += self.env.now - enter_time
+
+class DataSource(Source):
+    def run(self):
         while True:
             packet_size = self.get_packet_size()
-            sending_time = float(packet_size / self.rate)
+            sending_time = np.random.exponential(packet_size / self.rate)
             yield self.env.timeout(sending_time)
-            new_packet = packet(self, packet_size)
+            new_packet = Packet(self, packet_size)
             self.queue.reception(new_packet)
         
     def get_packet_size(self):
@@ -58,37 +66,27 @@ class DataSource(object):
         else:
             return 12000
         
-class VoiceSource(object):
+class VoiceSource(Source):
     def __init__(self, env, queue, packet_size, rate):
-        self.env = env
-        self.queue = queue
+        super().__init__(env, queue, rate)
         self.packet_size = packet_size
-        self.rate = rate
-        self.processed_packet = 0
-        self.total_response_time = 0
-        self.action = env.process(self.run())
 
     def run(self):
         sending_time = float(self.packet_size / self.rate)
         while True:
             yield self.env.timeout(sending_time)
-            new_packet = packet(self, self.packet_size)
-            self.queue.reception(new_packet)            
+            new_packet = Packet(self, self.packet_size)
+            self.queue.reception(new_packet)     
 
-class VideoSource(object):
-    def __init__(self, env, queue, packet_size, burstiness, average_rate, on_time_average):
-        self.env = env
-        self.queue = queue
+class VideoSource(Source):
+    def __init__(self, env, queue, packet_size, burstiness, rate, on_time_average):
+        super().__init__(env, queue, rate)
         self.packet_size = packet_size
         self.burstiness = burstiness
-        self.average_rate = average_rate
         self.on_time_average = on_time_average
-        self.processed_packet = 0
-        self.total_response_time = 0
-        self.action = env.process(self.run())
     
     def run(self):
-        peak_rate = float(self.burstiness * self.average_rate)
+        peak_rate = float(self.burstiness * self.rate)
         sending_time = float(self.packet_size / peak_rate)
         off_time_average = float(self.burstiness * self.on_time_average) - self.on_time_average
         is_on = True
@@ -102,7 +100,7 @@ class VideoSource(object):
                     init_time = self.env.now
                 else:
                     yield self.env.timeout(sending_time)
-                    new_packet = packet(self, self.packet_size)
+                    new_packet = Packet(self, self.packet_size)
                     self.queue.reception(new_packet)
             else:
                 if self.env.now - init_time >= state_time:
@@ -113,24 +111,23 @@ class VideoSource(object):
                     yield self.env.timeout(0.00001)
 
 
-class packet(object):
+class Packet(object):
     def __init__(self, source, packet_size):
         self.source = source
         self.packet_size = packet_size
         self.enter_time = 0
 
-    def acknowledge(self, current_time):
-        self.source.processed_packet += 1
-        self.source.total_response_time += current_time - self.enter_time
+    def acknowledge(self):
+        self.source.acknowledge(self.enter_time)
 
 df_response_time = pd.DataFrame(columns=['source_id', 'burstiness', 'response_time'])
 
-for burstiness in np.arange(1.0, 11, 1):
+for burstiness in np.arange(1.0, 10.5, 0.5):
     simulation_duration = 20
 
     env = simpy.Environment()
 
-    q = queueClass(env, 100 * math.pow(10, 6))
+    q = QueueClass(env, 100 * math.pow(10, 6))
     data_source = DataSource(env, q, 30 * math.pow(10, 6))
     voice_source = VoiceSource(env, q, 800, 20 * math.pow(10, 6))
     video_source = VideoSource(env, q, 8000, burstiness,30 * math.pow(10, 6), 0.001)
