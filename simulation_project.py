@@ -76,7 +76,7 @@ class Source(object):
     def calculate_confidence_interval(self):
         standard_deviation = math.sqrt((1 / (self.interval_count - 1)) * (self.z_square - (math.pow(self.z, 2) / self.interval_count)))
         epsilon_torque = 4.5 * standard_deviation
-        epsilon_total = epsilon_torque * math.sqrt(block_size / queue.env.now)
+        epsilon_total = epsilon_torque * math.sqrt(block_size / self.env.now)
 
         return epsilon_total
 class DataSource(Source):
@@ -182,6 +182,15 @@ for burstiness in np.arange(1.0, 10.5, 1):
     df_response_time.add_data("Voice Source", burstiness, voice_source.get_average_response_time())
     df_response_time.add_data("Video Source", burstiness, video_source.get_average_response_time())
 
+    print(data_source.calculate_confidence_interval())
+    print(data_source.get_average_response_time())
+    df_confidence_interval.add_data("Data Source Up", burstiness, data_source.calculate_confidence_interval() + data_source.get_average_response_time())
+    df_confidence_interval.add_data("Data Source Down", burstiness, data_source.calculate_confidence_interval() - data_source.get_average_response_time())
+    df_confidence_interval.add_data("Voice Source Up", burstiness, voice_source.calculate_confidence_interval() + voice_source.get_average_response_time())
+    df_confidence_interval.add_data("Voice Source Down", burstiness, voice_source.calculate_confidence_interval() - voice_source.get_average_response_time())
+    df_confidence_interval.add_data("Video Source Up", burstiness, video_source.calculate_confidence_interval() + video_source.get_average_response_time())
+    df_confidence_interval.add_data("Video Source Down", burstiness, video_source.calculate_confidence_interval() - video_source.get_average_response_time())
+
     print(f"Burstiness: {burstiness}")
 
 response_time_figure = plt.figure(1)
@@ -195,6 +204,21 @@ plt.xlabel('Burstiness')
 plt.title('Response time in function of the burstiness')
 plt.legend()
 response_time_figure.show()
+
+confidence_interval_figure = plt.figure(2)
+df_confidence_interval.print_data("Data Source Up")
+df_confidence_interval.print_data("Data Source Down")
+df_confidence_interval.print_data("Voice Source Up")
+df_confidence_interval.print_data("Voice Source Down")
+df_confidence_interval.print_data("Video Source Up")
+df_confidence_interval.print_data("Video Source Down")
+plt.grid(True, which='both', linestyle='dotted')
+plt.ylim(ymin=0)
+plt.ylabel('Response time')
+plt.xlabel('Burstiness')
+plt.title('Response time in function of the burstiness')
+plt.legend()
+confidence_interval_figure.show()
 
 input()
 
