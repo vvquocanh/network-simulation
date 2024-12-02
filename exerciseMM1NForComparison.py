@@ -64,6 +64,6 @@ env.run(until=simulationDuration)
 end_time = time.time()
 
 print("(physical) duration of the simulation:", end_time - start_time)
-print("Loss rate:",ps1.queueLosses*1.0/ps1.nbEmissions);
+print("Loss rate:",ps1.queueLosses*1.0/ps1.nbEmissions)
 
 

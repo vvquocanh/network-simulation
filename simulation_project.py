@@ -6,6 +6,9 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
+simulation_duration = 20
+block_size = math.sqrt(simulation_duration)
+
 class QueueClass(object):
     def __init__(self, env, service_rate):
         self.env = env
@@ -39,6 +42,11 @@ class Source(object):
         self.rate = rate
         self.processed_packet = 0
         self.total_response_time = 0
+        self.processed_packet_block = 0 
+        self.response_time_block = 0
+        self.interval_count = 0
+        self.z = 0  
+        self.z_square = 0
         self.action = env.process(self.run())
 
     def run(self):
@@ -46,8 +54,31 @@ class Source(object):
 
     def acknowledge(self, enter_time):
         self.processed_packet += 1
-        self.total_response_time += self.env.now - enter_time
+        new_response_time = self.env.now - enter_time
+        self.total_response_time += new_response_time
+        self.check_confidence_interval(new_response_time)
 
+    def check_confidence_interval(self, new_response_time):
+        if  (self.env.now - block_size * self.interval_count) > block_size:
+            new_zi = self.response_time_block / self.processed_packet_block
+            self.z += new_zi
+            self.z_square += math.pow(new_zi, 2)
+            self.processed_packet_block = 0
+            self.response_time_block = 0
+            self.interval_count += 1
+
+        self.processed_packet_block += 1
+        self.response_time_block += new_response_time
+
+    def get_average_response_time(self):
+        return float(self.total_response_time / self.processed_packet)
+
+    def calculate_confidence_interval(self):
+        standard_deviation = math.sqrt((1 / (self.interval_count - 1)) * (self.z_square - (math.pow(self.z, 2) / self.interval_count)))
+        epsilon_torque = 4.5 * standard_deviation
+        epsilon_total = epsilon_torque * math.sqrt(block_size / queue.env.now)
+
+        return epsilon_total
 class DataSource(Source):
     def run(self):
         while True:
@@ -120,11 +151,24 @@ class Packet(object):
     def acknowledge(self):
         self.source.acknowledge(self.enter_time)
 
-df_response_time = pd.DataFrame(columns=['source_id', 'burstiness', 'response_time'])
+class PandaFrameResponseTime(object):
+    def __init__(self):
+        self.source_id_column = "source_id"
+        self.burstiness_column = "burstiness"
+        self.response_time_column = "response_time"
 
-for burstiness in np.arange(1.0, 10.5, 0.5):
-    simulation_duration = 20
+        self.df = pd.DataFrame(columns=[self.source_id_column, self.burstiness_column, self.response_time_column])
 
+    def add_data(self, source_id, burstiness, response_time):
+        self.df.loc[len(self.df)] = {self.source_id_column: source_id, self.burstiness_column: burstiness, self.response_time_column: response_time}
+
+    def print_data(self, source_id):
+        plt.plot(self.df[self.df[self.source_id_column] == source_id][self.burstiness_column], self.df[self.df[self.source_id_column] == source_id][self.response_time_column], linewidth=1, label=source_id)
+
+df_response_time = PandaFrameResponseTime()
+df_confidence_interval = PandaFrameResponseTime()
+
+for burstiness in np.arange(1.0, 10.5, 1):
     env = simpy.Environment()
 
     q = QueueClass(env, 100 * math.pow(10, 6))
@@ -134,23 +178,25 @@ for burstiness in np.arange(1.0, 10.5, 0.5):
 
     env.run(until=simulation_duration)
 
-    df_response_time.loc[len(df_response_time)] = {'source_id': 'data_source', 'burstiness': burstiness, 'response_time': float(data_source.total_response_time / data_source.processed_packet)}
-    df_response_time.loc[len(df_response_time)] = {'source_id': 'voice_source', 'burstiness': burstiness, 'response_time': float(voice_source.total_response_time / voice_source.processed_packet)}
-    df_response_time.loc[len(df_response_time)] = {'source_id': 'video_source', 'burstiness': burstiness, 'response_time': float(video_source.total_response_time / video_source.processed_packet)}
-    df_response_time.loc[len(df_response_time)] = {'source_id': 'total', 'burstiness': burstiness, 'response_time': float((data_source.total_response_time + video_source.total_response_time + voice_source.total_response_time) / (data_source.processed_packet + voice_source.processed_packet + video_source.processed_packet))}
+    df_response_time.add_data("Data Source", burstiness, data_source.get_average_response_time())
+    df_response_time.add_data("Voice Source", burstiness, voice_source.get_average_response_time())
+    df_response_time.add_data("Video Source", burstiness, video_source.get_average_response_time())
 
     print(f"Burstiness: {burstiness}")
 
-plt.plot(df_response_time[df_response_time['source_id'] == 'data_source']['burstiness'], df_response_time[df_response_time['source_id'] == 'data_source']['response_time'], linewidth=1, label='Data Source')
-plt.plot(df_response_time[df_response_time['source_id'] == 'voice_source']['burstiness'], df_response_time[df_response_time['source_id'] == 'voice_source']['response_time'], linewidth=1, label='Voice Source')
-plt.plot(df_response_time[df_response_time['source_id'] == 'video_source']['burstiness'], df_response_time[df_response_time['source_id'] == 'video_source']['response_time'], linewidth=1, label='Video Source')
-plt.plot(df_response_time[df_response_time['source_id'] == 'total']['burstiness'], df_response_time[df_response_time['source_id'] == 'total']['response_time'], linewidth=1, label='Total')
+response_time_figure = plt.figure(1)
+df_response_time.print_data("Data Source")
+df_response_time.print_data("Voice Source")
+df_response_time.print_data("Video Source")
 plt.grid(True, which='both', linestyle='dotted')
 plt.ylim(ymin=0)
 plt.ylabel('Response time')
 plt.xlabel('Burstiness')
 plt.title('Response time in function of the burstiness')
 plt.legend()
-plt.show()
+response_time_figure.show()
+
+input()
+
 
     
