@@ -1,0 +1,4 @@
+Burstiness: 1.0Data Source:- Time: 100.00- Sent packets: 606262- Processed packet: 606262- Average response time: 0.0001770159995442745- Confidence interval: 0.01709337683458197
+Voice Source:- Time: 100.00- Sent packets: 2500000- Processed packet: 2499999- Average response time: 9.35180911551016e-05- Confidence interval: 0.03273504969066017
+Video Source:- Time: 100.00- Sent packets: 375000- Processed packet: 374999- Average response time: 0.00014190273548399335- Confidence interval: 0.01899799180142911
+Burstiness: 2.0

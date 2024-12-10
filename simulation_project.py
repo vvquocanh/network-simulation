@@ -182,10 +182,6 @@ class PandaFrameResponseTime(object):
 def check_stopping_condition(env, sources):
     while True:
 
-        if env.now < min_simulation_duration:
-            yield env.timeout(10)
-            continue
-
         confidence_data_source = sources['Data Source'].calculate_confidence_interval() / sources['Data Source'].get_average_response_time()
         confidence_voice_source = sources['Voice Source'].calculate_confidence_interval() / sources['Voice Source'].get_average_response_time()
         confidence_video_source = sources['Video Source'].calculate_confidence_interval() / sources['Video Source'].get_average_response_time()
@@ -193,6 +189,10 @@ def check_stopping_condition(env, sources):
         print(f"Time {env.now:.2f}: Confidence Data Source: {confidence_data_source}")
         print(f"Time {env.now:.2f}: Confidence Voice Source: {confidence_voice_source}")
         print(f"Time {env.now:.2f}: Confidence Video Source: {confidence_video_source}")
+
+        if env.now < min_simulation_duration:
+            yield env.timeout(10)
+            continue
 
         # Check if all confidence intervals are below the threshold
         if (
@@ -209,18 +209,24 @@ def check_stopping_condition(env, sources):
 
         yield env.timeout(10)  # Check every simulation time unit
 
+def clear_the_file():
+    file = open("result.txt", "w")
+    file.close()
+
 def write_to_file(data):
-    file = open("result.txt", "w+")
+    file = open("result.txt", "a")
     file.writelines(data)
     file.close()
 
 def write_source_information(env, name, source):
-    write_to_file(f"{name}:")
-    write_to_file(f"- Time: {env.now:.2f}")
-    write_to_file(f"- Sent packets: {source.get_total_sent_packet()}")
-    write_to_file(f"- Processed packet: {source.get_total_processed_packet()}")
-    write_to_file(f"- Average response time: {source.get_average_response_time()}")
-    write_to_file(f"- Confidence interval: {source.calculate_confidence_interval() / source.get_average_response_time()}")
+    write_to_file(f"{name}:\n")
+    write_to_file(f"- Time: {env.now:.2f}\n")
+    write_to_file(f"- Sent packets: {source.get_total_sent_packet()}\n")
+    write_to_file(f"- Processed packet: {source.get_total_processed_packet()}\n")
+    write_to_file(f"- Average response time: {source.get_average_response_time():.4f}\n")
+    write_to_file(f"- Confidence interval: {(source.calculate_confidence_interval() / source.get_average_response_time()):.4f}\n\n")
+
+clear_the_file()
 
 min_simulation_duration = 100
 max_simulation_duration = 100000
@@ -231,7 +237,7 @@ df_confidence_interval = PandaFrameResponseTime()
 
 for burstiness in np.arange(1.0, 10, 1):
     print(f"Burstiness: {burstiness}")
-    write_to_file(burstiness)
+    write_to_file(f"Burstiness: {burstiness}\n")
 
     env = simpy.Environment()
 
