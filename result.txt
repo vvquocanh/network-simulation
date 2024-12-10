@@ -1,4 +1,198 @@
-Burstiness: 1.0Data Source:- Time: 100.00- Sent packets: 606262- Processed packet: 606262- Average response time: 0.0001770159995442745- Confidence interval: 0.01709337683458197
-Voice Source:- Time: 100.00- Sent packets: 2500000- Processed packet: 2499999- Average response time: 9.35180911551016e-05- Confidence interval: 0.03273504969066017
-Video Source:- Time: 100.00- Sent packets: 375000- Processed packet: 374999- Average response time: 0.00014190273548399335- Confidence interval: 0.01899799180142911
+Burstiness: 1.0
+Data Source:
+- Time: 100.00
+- Sent packets: 603639
+- Processed packet: 603636
+- Average response time: 0.0002
+- Confidence interval: 0.0114
+
+Voice Source:
+- Time: 100.00
+- Sent packets: 2500000
+- Processed packet: 2499998
+- Average response time: 0.0001
+- Confidence interval: 0.0321
+
+Video Source:
+- Time: 100.00
+- Sent packets: 375000
+- Processed packet: 374999
+- Average response time: 0.0001
+- Confidence interval: 0.0116
+
 Burstiness: 2.0
+Data Source:
+- Time: 100.00
+- Sent packets: 604486
+- Processed packet: 604486
+- Average response time: 0.0003
+- Confidence interval: 0.0244
+
+Voice Source:
+- Time: 100.00
+- Sent packets: 2500000
+- Processed packet: 2499996
+- Average response time: 0.0002
+- Confidence interval: 0.0246
+
+Video Source:
+- Time: 100.00
+- Sent packets: 385003
+- Processed packet: 385001
+- Average response time: 0.0003
+- Confidence interval: 0.0186
+
+Burstiness: 3.0
+Data Source:
+- Time: 100.00
+- Sent packets: 604594
+- Processed packet: 604593
+- Average response time: 0.0006
+- Confidence interval: 0.0288
+
+Voice Source:
+- Time: 100.00
+- Sent packets: 2500000
+- Processed packet: 2499991
+- Average response time: 0.0005
+- Confidence interval: 0.0325
+
+Video Source:
+- Time: 100.00
+- Sent packets: 384369
+- Processed packet: 384365
+- Average response time: 0.0008
+- Confidence interval: 0.0242
+
+Burstiness: 4.0
+Data Source:
+- Time: 180.00
+- Sent packets: 1092369
+- Processed packet: 1092357
+- Average response time: 0.0010
+- Confidence interval: 0.0492
+
+Voice Source:
+- Time: 180.00
+- Sent packets: 4499999
+- Processed packet: 4499918
+- Average response time: 0.0009
+- Confidence interval: 0.0485
+
+Video Source:
+- Time: 180.00
+- Sent packets: 691477
+- Processed packet: 691436
+- Average response time: 0.0015
+- Confidence interval: 0.0346
+
+Burstiness: 5.0
+Data Source:
+- Time: 830.00
+- Sent packets: 5023477
+- Processed packet: 5023477
+- Average response time: 0.0014
+- Confidence interval: 0.0483
+
+Voice Source:
+- Time: 830.00
+- Sent packets: 20749999
+- Processed packet: 20749999
+- Average response time: 0.0013
+- Confidence interval: 0.0499
+
+Video Source:
+- Time: 830.00
+- Sent packets: 3170133
+- Processed packet: 3170133
+- Average response time: 0.0022
+- Confidence interval: 0.0419
+
+Burstiness: 6.0
+Data Source:
+- Time: 850.00
+- Sent packets: 5153410
+- Processed packet: 5153403
+- Average response time: 0.0019
+- Confidence interval: 0.0477
+
+Voice Source:
+- Time: 850.00
+- Sent packets: 21249999
+- Processed packet: 21249971
+- Average response time: 0.0018
+- Confidence interval: 0.0499
+
+Video Source:
+- Time: 850.00
+- Sent packets: 3247036
+- Processed packet: 3247019
+- Average response time: 0.0029
+- Confidence interval: 0.0414
+
+Burstiness: 7.0
+Data Source:
+- Time: 1450.00
+- Sent packets: 8774887
+- Processed packet: 8774859
+- Average response time: 0.0023
+- Confidence interval: 0.0488
+
+Voice Source:
+- Time: 1450.00
+- Sent packets: 36250000
+- Processed packet: 36249866
+- Average response time: 0.0023
+- Confidence interval: 0.0499
+
+Video Source:
+- Time: 1450.00
+- Sent packets: 5532441
+- Processed packet: 5532351
+- Average response time: 0.0037
+- Confidence interval: 0.0404
+
+Burstiness: 8.0
+Data Source:
+- Time: 1420.00
+- Sent packets: 8582724
+- Processed packet: 8582693
+- Average response time: 0.0027
+- Confidence interval: 0.0490
+
+Voice Source:
+- Time: 1420.00
+- Sent packets: 35500000
+- Processed packet: 35499816
+- Average response time: 0.0027
+- Confidence interval: 0.0499
+
+Video Source:
+- Time: 1420.00
+- Sent packets: 5399099
+- Processed packet: 5399064
+- Average response time: 0.0043
+- Confidence interval: 0.0398
+
+Burstiness: 9.0
+Data Source:
+- Time: 1570.00
+- Sent packets: 9495205
+- Processed packet: 9495183
+- Average response time: 0.0032
+- Confidence interval: 0.0482
+
+Voice Source:
+- Time: 1570.00
+- Sent packets: 39250000
+- Processed packet: 39249825
+- Average response time: 0.0031
+- Confidence interval: 0.0500
+
+Video Source:
+- Time: 1570.00
+- Sent packets: 5931535
+- Processed packet: 5931461
+- Average response time: 0.0051
+- Confidence interval: 0.0407
+
