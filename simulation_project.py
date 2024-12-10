@@ -37,6 +37,7 @@ class Source(object):
         self.env = env
         self.queue = queue
         self.rate = rate
+        self.sent_packet = 0
         self.processed_packet = 0
         self.total_response_time = 0
         self.processed_packet_block = 0 
@@ -82,6 +83,13 @@ class Source(object):
         epsilon_total = epsilon_torque * math.sqrt(block_size / self.env.now)
 
         return epsilon_total
+    
+    def get_total_processed_packet(self):
+        return self.processed_packet
+    
+    def get_total_sent_packet(self):
+        return self.sent_packet
+    
 class DataSource(Source):
     def run(self):
         while True:
@@ -90,6 +98,7 @@ class DataSource(Source):
             yield self.env.timeout(sending_time)
             new_packet = Packet(self, packet_size)
             self.queue.reception(new_packet)
+            self.sent_packet += 1
         
     def get_packet_size(self):
         percentage = random.randint(1, 100)
@@ -110,7 +119,8 @@ class VoiceSource(Source):
         while True:
             yield self.env.timeout(sending_time)
             new_packet = Packet(self, self.packet_size)
-            self.queue.reception(new_packet)     
+            self.queue.reception(new_packet)
+            self.sent_packet += 1     
 
 class VideoSource(Source):
     def __init__(self, env, queue, packet_size, burstiness, rate, on_time_average):
@@ -136,6 +146,7 @@ class VideoSource(Source):
                     yield self.env.timeout(sending_time)
                     new_packet = Packet(self, self.packet_size)
                     self.queue.reception(new_packet)
+                    self.sent_packet += 1
             else:
                 if self.env.now - init_time >= state_time:
                     is_on = True
@@ -170,6 +181,11 @@ class PandaFrameResponseTime(object):
 
 def check_stopping_condition(env, sources):
     while True:
+
+        if env.now < min_simulation_duration:
+            yield env.timeout(10)
+            continue
+
         confidence_data_source = sources['Data Source'].calculate_confidence_interval() / sources['Data Source'].get_average_response_time()
         confidence_voice_source = sources['Voice Source'].calculate_confidence_interval() / sources['Voice Source'].get_average_response_time()
         confidence_video_source = sources['Video Source'].calculate_confidence_interval() / sources['Video Source'].get_average_response_time()
@@ -184,22 +200,39 @@ def check_stopping_condition(env, sources):
             confidence_voice_source < confidence_threshold and
             confidence_video_source < confidence_threshold
         ):
-            print(f"Time {env.now:.2f}: Confidence Data Source: {confidence_data_source}")
-            print(f"Time {env.now:.2f}: Confidence Voice Source: {confidence_voice_source}")
-            print(f"Time {env.now:.2f}: Confidence Video Source: {confidence_video_source}")
+            write_source_information(env, "Data Source", sources['Data Source'])
+            write_source_information(env, "Voice Source", sources['Voice Source'])
+            write_source_information(env, "Video Source", sources['Video Source'])
+
             print("Stopping simulation: All confidence intervals are below the threshold.")
             break
 
         yield env.timeout(10)  # Check every simulation time unit
 
+def write_to_file(data):
+    file = open("result.txt", "w+")
+    file.writelines(data)
+    file.close()
+
+def write_source_information(env, name, source):
+    write_to_file(f"{name}:")
+    write_to_file(f"- Time: {env.now:.2f}")
+    write_to_file(f"- Sent packets: {source.get_total_sent_packet()}")
+    write_to_file(f"- Processed packet: {source.get_total_processed_packet()}")
+    write_to_file(f"- Average response time: {source.get_average_response_time()}")
+    write_to_file(f"- Confidence interval: {source.calculate_confidence_interval() / source.get_average_response_time()}")
+
+min_simulation_duration = 100
 max_simulation_duration = 100000
 block_size = 10
 confidence_threshold = 0.05
 df_response_time = PandaFrameResponseTime()
 df_confidence_interval = PandaFrameResponseTime()
 
-for burstiness in np.arange(1.0, 11, 1):
+for burstiness in np.arange(1.0, 10, 1):
     print(f"Burstiness: {burstiness}")
+    write_to_file(burstiness)
+
     env = simpy.Environment()
 
     q = QueueClass(env, 100 * math.pow(10, 6))
@@ -230,7 +263,7 @@ for burstiness in np.arange(1.0, 11, 1):
     # df_confidence_interval.add_data("Video Source Up", burstiness, video_source.calculate_confidence_interval() + video_source.get_average_response_time())
     # df_confidence_interval.add_data("Video Source Down", burstiness, - video_source.calculate_confidence_interval() + video_source.get_average_response_time())
 
-response_time_figure = plt.figure(1)
+plt.figure()
 df_response_time.print_data("Data Source")
 df_response_time.print_data("Voice Source")
 df_response_time.print_data("Video Source")
@@ -240,7 +273,7 @@ plt.ylabel('Response time')
 plt.xlabel('Burstiness')
 plt.title('Response time in function of the burstiness')
 plt.legend()
-response_time_figure.show()
+plt.show()
 
 # confidence_interval_figure = plt.figure(2)
 # df_confidence_interval.print_data("Data Source Up")
