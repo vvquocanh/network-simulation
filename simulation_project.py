@@ -240,7 +240,7 @@ def check_stopping_condition(env, burstiness, sources, result):
         print(f"Time {env.now:.2f}: Confidence Total: {confidence_total}")
 
         if env.now < min_simulation_duration:
-            yield env.timeout(10)
+            yield env.timeout(block_size)
             continue
 
         if (
@@ -306,12 +306,12 @@ init_file()
 
 min_simulation_duration = 100
 max_simulation_duration = 100000
-block_size = 10
+block_size = 50
 confidence_threshold = 0.05
 # df_response_time = PandaFrameResponseTime()
 # df_confidence_interval = PandaFrameResponseTime()
 
-for burstiness in np.arange(1.0, 11, 1):
+for burstiness in np.arange(20.0, 101, 10):
     print(f"Burstiness: {burstiness}")
 
     env = simpy.Environment()
