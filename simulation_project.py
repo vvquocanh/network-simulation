@@ -64,13 +64,10 @@ class Source(object):
         if  (self.env.now - block_size * self.interval_count) > block_size:
             new_zi = self.response_time_block / self.processed_packet_block
             self.z += new_zi
-            self.result.z += new_zi
             self.z_square += math.pow(new_zi, 2)
-            self.result.z_square += math.pow(new_zi, 2)
             self.processed_packet_block = 0
             self.response_time_block = 0
             self.interval_count += 1
-            self.result.interval_count += 1
 
         self.processed_packet_block += 1
         self.response_time_block += new_response_time
@@ -186,6 +183,9 @@ class Result(object):
         self.z = 0
         self.z_square = 0
 
+        self.processed_packet_block = 0
+        self.response_time_block = 0
+
     def check_confidence_interval(self, new_response_time):
         if  (self.env.now - block_size * self.interval_count) > block_size:
             new_zi = self.response_time_block / self.processed_packet_block
@@ -257,11 +257,11 @@ def check_stopping_condition(env, burstiness, sources, result):
                     sources['Data Source'].get_total_sent_packet(), 
                     sources['Voice Source'].get_total_sent_packet(), 
                     sources['Video Source'].get_total_sent_packet(), 
-                    result.get_total_sent_packet(), 
+                    result.total_sent_packet, 
                     sources['Data Source'].get_total_processed_packet(), 
                     sources['Voice Source'].get_total_processed_packet(), 
                     sources['Video Source'].get_total_processed_packet(), 
-                    result.get_total_processed_packet(), 
+                    result.total_processed_packet, 
                     confidence_data_source, 
                     confidence_voice_source, 
                     confidence_video_source,
