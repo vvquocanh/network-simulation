@@ -271,7 +271,7 @@ def check_stopping_condition(env, burstiness, sources, result):
             print("Stopping simulation: All confidence intervals are below the threshold.")
             break
 
-        yield env.timeout(10)  # Check every simulation time unit
+        yield env.timeout(block_size)  # Check every simulation time unit
 
 def init_file():
     with open("data.csv", "w") as file:
