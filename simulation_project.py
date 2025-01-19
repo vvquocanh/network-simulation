@@ -63,14 +63,11 @@ class Source(object):
     def check_confidence_interval(self, new_response_time):
         if  (self.env.now - block_size * self.interval_count) > block_size:
             new_zi = self.response_time_block / self.processed_packet_block
-            self.z += new_zi
-            self.result.z += new_zi
             self.z_square += math.pow(new_zi, 2)
-            self.result.z_square += math.pow(new_zi, 2)
             self.processed_packet_block = 0
             self.response_time_block = 0
             self.interval_count += 1
-            self.result.interval_count += 1
+            result.check_confidence_interval(new_response_time)
 
         self.processed_packet_block += 1
         self.response_time_block += new_response_time
@@ -118,8 +115,8 @@ class DataSource(Source):
             return 12000
         
 class VoiceSource(Source):
-    def __init__(self, env, queue, packet_size, rate):
-        super().__init__(env, queue, rate)
+    def __init__(self, env, queue, packet_size, rate, result):
+        super().__init__(env, queue, rate, result)
         self.packet_size = packet_size
 
     def run(self):
@@ -132,8 +129,8 @@ class VoiceSource(Source):
             self.result.total_sent_packet += 1 
 
 class VideoSource(Source):
-    def __init__(self, env, queue, packet_size, burstiness, rate, on_time_average):
-        super().__init__(env, queue, rate)
+    def __init__(self, env, queue, packet_size, burstiness, rate, on_time_average, result):
+        super().__init__(env, queue, rate, result)
         self.packet_size = packet_size
         self.burstiness = burstiness
         self.on_time_average = on_time_average
@@ -184,6 +181,20 @@ class Result(object):
         self.z = 0
         self.z_square = 0
 
+        self.processed_packet_block = 0
+        self.response_time_block = 0
+
+    def check_confidence_interval(self, new_response_time):
+        if  (self.env.now - block_size * self.interval_count) > block_size:
+            new_zi = self.response_time_block / self.processed_packet_block
+            self.z_square += math.pow(new_zi, 2)
+            self.processed_packet_block = 0
+            self.response_time_block = 0
+            self.interval_count += 1
+
+        self.processed_packet_block += 1
+        self.response_time_block += new_response_time    
+    
     def get_average_response_time(self):
         if self.total_processed_packet <= 0:
             return 1
@@ -252,14 +263,15 @@ def check_stopping_condition(env, burstiness, sources, result):
                     confidence_voice_source, 
                     confidence_video_source,
                     confidence_total]
-
+            
+            write_to_file(data)
             print("Stopping simulation: All confidence intervals are below the threshold.")
             break
 
         yield env.timeout(10)  # Check every simulation time unit
 
 def init_file():
-    with open("data.csv", "f") as file:
+    with open("data.csv", "w") as file:
         writer = csv.writer(file)
         writer.writerow(headers)
 
@@ -300,19 +312,17 @@ for burstiness in np.arange(1.0, 11, 1):
     print(f"Burstiness: {burstiness}")
 
     env = simpy.Environment()
-
+    result = Result(env)
     q = QueueClass(env, 100 * math.pow(10, 6))
-    data_source = DataSource(env, q, 30 * math.pow(10, 6))
-    voice_source = VoiceSource(env, q, 800, 20 * math.pow(10, 6))
-    video_source = VideoSource(env, q, 8000, burstiness,30 * math.pow(10, 6), 0.001)
+    data_source = DataSource(env, q, 30 * math.pow(10, 6), result)
+    voice_source = VoiceSource(env, q, 800, 20 * math.pow(10, 6), result)
+    video_source = VideoSource(env, q, 8000, burstiness,30 * math.pow(10, 6), 0.001, result)
     
     sources = {
         "Data Source": data_source,
         "Voice Source": voice_source,
         "Video Source": video_source
     }
-
-    result = Result(env)
 
     proc = env.process(check_stopping_condition(env, burstiness, sources, result))
 
