@@ -1,3 +1,4 @@
+import csv
 import simpy
 import random
 import queue
@@ -183,6 +184,12 @@ class Result(object):
         self.z = 0
         self.z_square = 0
 
+    def get_average_response_time(self):
+        if self.total_processed_packet <= 0:
+            return 1
+
+        return float(self.total_response_time / self.total_processed_packet)
+
     def calculate_confidence_interval(self):
         if self.interval_count <= 1: 
             return 1
@@ -206,65 +213,91 @@ class PandaFrameResponseTime(object):
     def print_data(self, source_id):
         plt.plot(self.df[self.df[self.source_id_column] == source_id][self.burstiness_column], self.df[self.df[self.source_id_column] == source_id][self.response_time_column], linewidth=1, label=source_id)
 
-def check_stopping_condition(env, sources):
+def check_stopping_condition(env, burstiness, sources, result):
     while True:
-
         confidence_data_source = sources['Data Source'].calculate_confidence_interval() / sources['Data Source'].get_average_response_time()
         confidence_voice_source = sources['Voice Source'].calculate_confidence_interval() / sources['Voice Source'].get_average_response_time()
         confidence_video_source = sources['Video Source'].calculate_confidence_interval() / sources['Video Source'].get_average_response_time()
+        confidence_total = result.calculate_confidence_interval() / result.get_average_response_time()
 
         print(f"Time {env.now:.2f}: Confidence Data Source: {confidence_data_source}")
         print(f"Time {env.now:.2f}: Confidence Voice Source: {confidence_voice_source}")
         print(f"Time {env.now:.2f}: Confidence Video Source: {confidence_video_source}")
+        print(f"Time {env.now:.2f}: Confidence Total: {confidence_total}")
 
         if env.now < min_simulation_duration:
             yield env.timeout(10)
             continue
 
-        # Check if all confidence intervals are below the threshold
         if (
             confidence_data_source < confidence_threshold and
             confidence_voice_source < confidence_threshold and
-            confidence_video_source < confidence_threshold
+            confidence_video_source < confidence_threshold and
+            confidence_total < confidence_threshold
         ):
-            write_to_file(f"Time: {env.now:.2f}\n")
-            write_source_information(env, "Data Source", sources['Data Source'])
-            write_source_information(env, "Voice Source", sources['Voice Source'])
-            write_source_information(env, "Video Source", sources['Video Source'])
+            data = [burstiness, env.now, 
+                    sources['Data Source'].get_average_response_time(), 
+                    sources['Voice Source'].get_average_response_time(), 
+                    sources['Video Source'].get_average_response_time(), 
+                    result.get_average_response_time(), 
+                    sources['Data Source'].get_total_sent_packet(), 
+                    sources['Voice Source'].get_total_sent_packet(), 
+                    sources['Video Source'].get_total_sent_packet(), 
+                    result.get_total_sent_packet(), 
+                    sources['Data Source'].get_total_processed_packet(), 
+                    sources['Voice Source'].get_total_processed_packet(), 
+                    sources['Video Source'].get_total_processed_packet(), 
+                    result.get_total_processed_packet(), 
+                    confidence_data_source, 
+                    confidence_voice_source, 
+                    confidence_video_source,
+                    confidence_total]
 
             print("Stopping simulation: All confidence intervals are below the threshold.")
             break
 
         yield env.timeout(10)  # Check every simulation time unit
 
-def clear_the_file():
-    file = open("result.txt", "w")
-    file.close()
+def init_file():
+    with open("data.csv", "f") as file:
+        writer = csv.writer(file)
+        writer.writerow(headers)
 
 def write_to_file(data):
-    file = open("result.txt", "a")
-    file.writelines(data)
-    file.close()
+    with open("result.txt", "a") as file:
+        writer = csv.writer(file)
+        writer.writerow(data)
 
-def write_source_information(env, name, source):
-    write_to_file(f"{name}:\n")
-    write_to_file(f"- Sent packets: {source.get_total_sent_packet()}\n")
-    write_to_file(f"- Processed packet: {source.get_total_processed_packet()}\n")
-    write_to_file(f"- Average response time: {source.get_average_response_time()}\n")
-    write_to_file(f"- Confidence interval: {(source.calculate_confidence_interval() / source.get_average_response_time()):.6f}\n\n")
+headers = ["burstiness", 
+           "time",
+           "data_response_time", 
+           "voice_response_time", 
+           "video_response_time", 
+           "total_response_time", 
+           "data_sent_packet", 
+           "voice_sent_packet", 
+           "video_sent_packet", 
+           "total_sent_packet", 
+           "data_processed_packet", 
+           "voice_processed_packet", 
+           "video_processed_packet", 
+           "total_processed_packet", 
+           "data_confidence_interval", 
+           "voice_confidence_interval", 
+           "video_confidence_interval",
+           "total_confidence_interval"]
 
-clear_the_file()
+init_file()
 
 min_simulation_duration = 100
 max_simulation_duration = 100000
 block_size = 10
 confidence_threshold = 0.05
-df_response_time = PandaFrameResponseTime()
-df_confidence_interval = PandaFrameResponseTime()
+# df_response_time = PandaFrameResponseTime()
+# df_confidence_interval = PandaFrameResponseTime()
 
 for burstiness in np.arange(1.0, 11, 1):
     print(f"Burstiness: {burstiness}")
-    write_to_file(f"Burstiness: {burstiness}\n")
 
     env = simpy.Environment()
 
@@ -272,57 +305,36 @@ for burstiness in np.arange(1.0, 11, 1):
     data_source = DataSource(env, q, 30 * math.pow(10, 6))
     voice_source = VoiceSource(env, q, 800, 20 * math.pow(10, 6))
     video_source = VideoSource(env, q, 8000, burstiness,30 * math.pow(10, 6), 0.001)
-
+    
     sources = {
         "Data Source": data_source,
         "Voice Source": voice_source,
         "Video Source": video_source
     }
 
-    proc = env.process(check_stopping_condition(env, sources))
+    result = Result(env)
+
+    proc = env.process(check_stopping_condition(env, burstiness, sources, result))
 
     env.run(until=proc)
 
-    df_response_time.add_data("Data Source", burstiness, data_source.get_average_response_time())
-    df_response_time.add_data("Voice Source", burstiness, voice_source.get_average_response_time())
-    df_response_time.add_data("Video Source", burstiness, video_source.get_average_response_time())
+    # df_response_time.add_data("Data Source", burstiness, data_source.get_average_response_time())
+    # df_response_time.add_data("Voice Source", burstiness, voice_source.get_average_response_time())
+    # df_response_time.add_data("Video Source", burstiness, video_source.get_average_response_time())
 
     print("")
 
-    # df_confidence_interval.add_data("Data Source Up", burstiness, data_source.calculate_confidence_interval() + data_source.get_average_response_time())
-    # df_confidence_interval.add_data("Data Source Down", burstiness, - data_source.calculate_confidence_interval() + data_source.get_average_response_time())
-    # df_confidence_interval.add_data("Voice Source Up", burstiness, voice_source.calculate_confidence_interval() + voice_source.get_average_response_time())
-    # df_confidence_interval.add_data("Voice Source Down", burstiness, - voice_source.calculate_confidence_interval() + voice_source.get_average_response_time())
-    # df_confidence_interval.add_data("Video Source Up", burstiness, video_source.calculate_confidence_interval() + video_source.get_average_response_time())
-    # df_confidence_interval.add_data("Video Source Down", burstiness, - video_source.calculate_confidence_interval() + video_source.get_average_response_time())
-
-plt.figure()
-df_response_time.print_data("Data Source")
-df_response_time.print_data("Voice Source")
-df_response_time.print_data("Video Source")
-plt.grid(True, which='both', linestyle='dotted')
-plt.ylim(ymin=0)
-plt.ylabel('Response time')
-plt.xlabel('Burstiness')
-plt.title('Response time in function of the burstiness')
-plt.legend()
-plt.show()
-
-# confidence_interval_figure = plt.figure(2)
-# df_confidence_interval.print_data("Data Source Up")
-# df_confidence_interval.print_data("Data Source Down")
-# df_confidence_interval.print_data("Voice Source Up")
-# df_confidence_interval.print_data("Voice Source Down")
-# df_confidence_interval.print_data("Video Source Up")
-# df_confidence_interval.print_data("Video Source Down")
+# plt.figure()
+# df_response_time.print_data("Data Source")
+# df_response_time.print_data("Voice Source")
+# df_response_time.print_data("Video Source")
 # plt.grid(True, which='both', linestyle='dotted')
 # plt.ylim(ymin=0)
 # plt.ylabel('Response time')
 # plt.xlabel('Burstiness')
-# plt.title('Confidence interval')
+# plt.title('Response time in function of the burstiness')
 # plt.legend()
-# confidence_interval_figure.show()
+# plt.show()
 
-#input()
 
     
