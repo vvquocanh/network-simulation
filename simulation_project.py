@@ -33,7 +33,7 @@ class QueueClass(object):
             self.env.process(self.service())
 
 class Source(object):
-    def __init__(self, env, queue, rate):
+    def __init__(self, env, queue, rate, result):
         self.env = env
         self.queue = queue
         self.rate = rate
@@ -45,6 +45,7 @@ class Source(object):
         self.interval_count = 0
         self.z = 0  
         self.z_square = 0
+        self.result = result
         self.action = env.process(self.run())
 
     def run(self):
@@ -52,18 +53,23 @@ class Source(object):
 
     def acknowledge(self, enter_time):
         self.processed_packet += 1
+        self.result.total_processed_packet += 1
         new_response_time = self.env.now - enter_time
         self.total_response_time += new_response_time
+        self.result.total_response_time += new_response_time
         self.check_confidence_interval(new_response_time)
 
     def check_confidence_interval(self, new_response_time):
         if  (self.env.now - block_size * self.interval_count) > block_size:
             new_zi = self.response_time_block / self.processed_packet_block
             self.z += new_zi
+            self.result.z += new_zi
             self.z_square += math.pow(new_zi, 2)
+            self.result.z_square += math.pow(new_zi, 2)
             self.processed_packet_block = 0
             self.response_time_block = 0
             self.interval_count += 1
+            self.result.interval_count += 1
 
         self.processed_packet_block += 1
         self.response_time_block += new_response_time
@@ -99,6 +105,7 @@ class DataSource(Source):
             new_packet = Packet(self, packet_size)
             self.queue.reception(new_packet)
             self.sent_packet += 1
+            self.result.total_sent_packet += 1
         
     def get_packet_size(self):
         percentage = random.randint(1, 100)
@@ -120,7 +127,8 @@ class VoiceSource(Source):
             yield self.env.timeout(sending_time)
             new_packet = Packet(self, self.packet_size)
             self.queue.reception(new_packet)
-            self.sent_packet += 1     
+            self.sent_packet += 1    
+            self.result.total_sent_packet += 1 
 
 class VideoSource(Source):
     def __init__(self, env, queue, packet_size, burstiness, rate, on_time_average):
@@ -147,6 +155,7 @@ class VideoSource(Source):
                     new_packet = Packet(self, self.packet_size)
                     self.queue.reception(new_packet)
                     self.sent_packet += 1
+                    self.result.total_sent_packet += 1
             else:
                 if self.env.now - init_time >= state_time:
                     is_on = True
@@ -154,7 +163,6 @@ class VideoSource(Source):
                     init_time = self.env.now
                 else:
                     yield self.env.timeout(0.00001)
-
 
 class Packet(object):
     def __init__(self, source, packet_size):
@@ -165,6 +173,25 @@ class Packet(object):
     def acknowledge(self):
         self.source.acknowledge(self.enter_time)
 
+class Result(object):
+    def __init__(self, env):
+        self.env = env
+        self.total_response_time = 0
+        self.total_processed_packet = 0
+        self.total_sent_packet = 0
+        self.interval_count = 0
+        self.z = 0
+        self.z_square = 0
+
+    def calculate_confidence_interval(self):
+        if self.interval_count <= 1: 
+            return 1
+
+        standard_deviation = math.sqrt((1 / (self.interval_count - 1)) * (self.z_square - (math.pow(self.z, 2) / self.interval_count)))
+        epsilon_torque = 4.5 * standard_deviation
+        epsilon_total = epsilon_torque * math.sqrt(block_size / self.env.now)
+
+        return epsilon_total
 class PandaFrameResponseTime(object):
     def __init__(self):
         self.source_id_column = "source_id"
@@ -200,6 +227,7 @@ def check_stopping_condition(env, sources):
             confidence_voice_source < confidence_threshold and
             confidence_video_source < confidence_threshold
         ):
+            write_to_file(f"Time: {env.now:.2f}\n")
             write_source_information(env, "Data Source", sources['Data Source'])
             write_source_information(env, "Voice Source", sources['Voice Source'])
             write_source_information(env, "Video Source", sources['Video Source'])
@@ -220,11 +248,10 @@ def write_to_file(data):
 
 def write_source_information(env, name, source):
     write_to_file(f"{name}:\n")
-    write_to_file(f"- Time: {env.now:.2f}\n")
     write_to_file(f"- Sent packets: {source.get_total_sent_packet()}\n")
     write_to_file(f"- Processed packet: {source.get_total_processed_packet()}\n")
-    write_to_file(f"- Average response time: {source.get_average_response_time():.4f}\n")
-    write_to_file(f"- Confidence interval: {(source.calculate_confidence_interval() / source.get_average_response_time()):.4f}\n\n")
+    write_to_file(f"- Average response time: {source.get_average_response_time()}\n")
+    write_to_file(f"- Confidence interval: {(source.calculate_confidence_interval() / source.get_average_response_time()):.6f}\n\n")
 
 clear_the_file()
 
@@ -235,7 +262,7 @@ confidence_threshold = 0.05
 df_response_time = PandaFrameResponseTime()
 df_confidence_interval = PandaFrameResponseTime()
 
-for burstiness in np.arange(1.0, 10, 1):
+for burstiness in np.arange(1.0, 11, 1):
     print(f"Burstiness: {burstiness}")
     write_to_file(f"Burstiness: {burstiness}\n")
 
