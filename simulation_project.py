@@ -279,7 +279,7 @@ def init_file():
         writer.writerow(headers)
 
 def write_to_file(data):
-    with open("result.txt", "a") as file:
+    with open("data.csv", "a") as file:
         writer = csv.writer(file)
         writer.writerow(data)
 
