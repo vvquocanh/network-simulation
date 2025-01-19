@@ -63,14 +63,19 @@ class Source(object):
     def check_confidence_interval(self, new_response_time):
         if  (self.env.now - block_size * self.interval_count) > block_size:
             new_zi = self.response_time_block / self.processed_packet_block
+            self.z += new_zi
+            self.result.z += new_zi
             self.z_square += math.pow(new_zi, 2)
+            self.result.z_square += math.pow(new_zi, 2)
             self.processed_packet_block = 0
             self.response_time_block = 0
             self.interval_count += 1
-            result.check_confidence_interval(new_response_time)
+            self.result.interval_count += 1
 
         self.processed_packet_block += 1
         self.response_time_block += new_response_time
+
+        self.result.check_confidence_interval(new_response_time)
 
     def get_average_response_time(self):
         if self.processed_packet <= 0:
@@ -181,20 +186,18 @@ class Result(object):
         self.z = 0
         self.z_square = 0
 
-        self.processed_packet_block = 0
-        self.response_time_block = 0
-
     def check_confidence_interval(self, new_response_time):
         if  (self.env.now - block_size * self.interval_count) > block_size:
             new_zi = self.response_time_block / self.processed_packet_block
+            self.z += new_zi
             self.z_square += math.pow(new_zi, 2)
             self.processed_packet_block = 0
             self.response_time_block = 0
             self.interval_count += 1
 
         self.processed_packet_block += 1
-        self.response_time_block += new_response_time    
-    
+        self.response_time_block += new_response_time
+
     def get_average_response_time(self):
         if self.total_processed_packet <= 0:
             return 1
