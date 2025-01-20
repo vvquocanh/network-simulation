@@ -304,7 +304,7 @@ headers = ["burstiness",
 
 init_file()
 
-min_simulation_duration = 100
+min_simulation_duration = 1000
 max_simulation_duration = 100000
 block_size = 50
 confidence_threshold = 0.05
