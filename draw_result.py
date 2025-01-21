@@ -65,16 +65,16 @@ def calculate_slope(csv_file):
     data = pd.read_csv(csv_file)
     
     data_slope = data['data_response_time'].diff() / data['burstiness'].diff()
-    print(f'Data Slope: {data_slope.mean():.2e}')
+    print(f'Data Slope: {data_slope.mean() * 1000}')
     
     voice_slope = data['voice_response_time'].diff() / data['burstiness'].diff()
-    print(f'Voice Slope: {voice_slope.mean():.2e}')
+    print(f'Voice Slope: {voice_slope.mean() * 1000}')
     
     video_slope = data['video_response_time'].diff() / data['burstiness'].diff()
-    print(f'Video Slope: {video_slope.mean():.2e}')
+    print(f'Video Slope: {video_slope.mean() * 1000}')
     
     total_slope = data['total_response_time'].diff() / data['burstiness'].diff()
-    print(f'Total Slope: {total_slope.mean():.2e}')
+    print(f'Total Slope: {total_slope.mean() * 1000}')
     
 #plot_sent_packet_proportion("data_full.csv", 10, 100)
 #plot_response_times("data_full.csv", 10, 100)

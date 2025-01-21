@@ -308,8 +308,6 @@ min_simulation_duration = 1000
 max_simulation_duration = 100000
 block_size = 50
 confidence_threshold = 0.05
-# df_response_time = PandaFrameResponseTime()
-# df_confidence_interval = PandaFrameResponseTime()
 
 for burstiness in np.arange(20.0, 101, 10):
     print(f"Burstiness: {burstiness}")
@@ -331,23 +329,7 @@ for burstiness in np.arange(20.0, 101, 10):
 
     env.run(until=proc)
 
-    # df_response_time.add_data("Data Source", burstiness, data_source.get_average_response_time())
-    # df_response_time.add_data("Voice Source", burstiness, voice_source.get_average_response_time())
-    # df_response_time.add_data("Video Source", burstiness, video_source.get_average_response_time())
-
     print("")
-
-# plt.figure()
-# df_response_time.print_data("Data Source")
-# df_response_time.print_data("Voice Source")
-# df_response_time.print_data("Video Source")
-# plt.grid(True, which='both', linestyle='dotted')
-# plt.ylim(ymin=0)
-# plt.ylabel('Response time')
-# plt.xlabel('Burstiness')
-# plt.title('Response time in function of the burstiness')
-# plt.legend()
-# plt.show()
 
 
     
